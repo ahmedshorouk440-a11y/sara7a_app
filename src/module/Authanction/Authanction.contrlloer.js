@@ -1,13 +1,24 @@
 
 import { Router } from "express";
 import { filevalidation, localFileUpload } from "../../common/utlities/multer/multer.js";
-import { AddAuth, DeleteAuth, GetAllUser, GetUserById, login, UpdateUser } from "./Authanction.service.js";
+import {
+  AddAuth,
+  ConfirmEmail,
+  DeleteAuth,
+  GetAllUser,
+  GetUserById,
+  login,
+  UpdateUser,
+  confirmLogin,
+  enableTwoStep,
+  confirmEnableTwoStep,
+} from "./Authanction.service.js";
 import { auth } from "../../common/middleWare/token.middle.js";
-import * as validators from './Authanction.validation.js'
+import * as validators from "./Authanction.validation.js";
 
 import { Validation } from "../../common/middleWare/Validation/index.js";
-import { BadRequestExcption } from "../../common/Exption/index.js";
-const router = Router()
+
+const router = Router();
 
 
 router.post(
@@ -30,80 +41,124 @@ router.post(
     }
   }
 );
-router.get("/GetAllAuth" , async(req, res, next)=>{
-    try{
-    let data = await GetAllUser(req.query)
+
+
+router.get("/GetAllAuth", async (req, res, next) => {
+  try {
+    let data = await GetAllUser(req.query);
     res.status(202).json({
-        message: "User Fetched" , 
-        data
-    })
-    }catch(error){
-        next(error)
-    }
-})
+      message: "User Fetched",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 
 router.patch("/Confirm_Email", async (req, res, next) => {
   try {
-    let data = await ConfirmEmail(req.body);
+    let data = await ConfirmEmail(req.body); 
     res.status(200).json({
       message: "Email Confired",
       data,
     });
-  } catch(error) {
+  } catch (error) {
     next(error);
   }
-});  
+});
+
 
 router.post("/Login", Validation(validators.login), async (req, res, next) => {
   try {
-    const data = await login(req.validate)
+    const data = await login(req.validate);
+    res.status(200).json({
+      message: data.twoStepRequired
+        ? "OTP sent to your email"
+        : "User Login Successfully",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+router.post("/LoginConfirmation", async (req, res, next) => {
+  try {
+    const data = await confirmLogin(req.body);
     res.status(200).json({
       message: "User Login Successfully",
       data,
-    })
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-})
-
-router.get("/GetUserById" , auth , async(req,  res , next)=>{
-    try{
+});
 
 
+router.post("/Enable2Step", auth, async (req, res, next) => {
+  try {
+    const data = await enableTwoStep(req.user.id);
+    res.status(200).json({
+      message: "OTP Sent",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
-        let data = await GetUserById(req.user.id)
-        res.status(200).json({
-            message : "User Fetched",
-            data
-        })
-    }catch(error){
-    next(error)
 
-    }
-})
+router.patch("/Confirm2Step", auth, async (req, res, next) => {
+  try {
+    const data = await confirmEnableTwoStep(req.user.id, req.body.otp);
+    res.status(200).json({
+      message: "2-Step Verification Enabled",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
-router.patch("/UpdateAuth" , auth,async(req, res, next)=>{
-try{
-    let data = await UpdateUser(req.user.id , req.body)
+
+router.get("/GetUserById", auth, async (req, res, next) => {
+  try {
+    let data = await GetUserById(req.user.id);
+    res.status(200).json({
+      message: "User Fetched",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+
+router.patch("/UpdateAuth", auth, async (req, res, next) => {
+  try {
+    let data = await UpdateUser(req.user.id, req.body);
     res.status(201).json({
-        message : "User Updated Successfully",
-        data
-    })
-}catch(error){
-  next(error)
-}
-})
-router.delete("/deleteAuth" , auth , async(req, res, next)=>{
-    try{
-     let data = await DeleteAuth(req.user.id)
-     res.status(201).json({
-        message : "User Deleted Successfully",
-        data
-     })
-    }catch(error){
-        next(error)
-    }
-})
+      message: "User Updated Successfully",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
 
-export default router
+router.delete("/deleteAuth", auth, async (req, res, next) => {
+  try {
+    let data = await DeleteAuth(req.user.id);
+    res.status(201).json({
+      message: "User Deleted Successfully",
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+export default router;
